@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 
 function App() {
-  const [data, setData] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [newItem, setNewItem] = useState('');
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
 
   const fetchData = async () => {
     try {
@@ -19,19 +19,23 @@ function App() {
         throw new Error('Network response was not ok');
       }
       const result = await response.json();
-      setData(result);
+      setTasks(result);
       setError(null);
     } catch (err) {
-      setError('Failed to fetch data: ' + err.message);
-      console.error('Error fetching data:', err);
+      setError('Failed to fetch tasks: ' + err.message);
+      console.error('Error fetching tasks:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newItem.trim()) return;
+    if (!newTaskTitle.trim()) return;
 
     try {
       const response = await fetch('/api/items', {
@@ -39,37 +43,94 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: newItem }),
+        body: JSON.stringify({ title: newTaskTitle, dueDate: newTaskDueDate || null }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add item');
+        throw new Error('Failed to add task');
       }
 
       const result = await response.json();
-      setData([...data, result]);
-      setNewItem('');
+      setTasks((currentTasks) => [result, ...currentTasks]);
+      setNewTaskTitle('');
+      setNewTaskDueDate('');
+      setError(null);
     } catch (err) {
-      setError('Error adding item: ' + err.message);
-      console.error('Error adding item:', err);
+      setError('Error adding task: ' + err.message);
+      console.error('Error adding task:', err);
     }
   };
 
-  const handleDelete = async (itemId) => {
+  const handleDelete = async (taskId) => {
     try {
-      const response = await fetch(`/api/items/${itemId}`, {
+      const response = await fetch(`/api/items/${taskId}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete item');
+        throw new Error('Failed to delete task');
       }
 
-      setData(data.filter(item => item.id !== itemId));
+      setTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
       setError(null);
     } catch (err) {
-      setError('Error deleting item: ' + err.message);
-      console.error('Error deleting item:', err);
+      setError('Error deleting task: ' + err.message);
+      console.error('Error deleting task:', err);
+    }
+  };
+
+  const handleToggleComplete = async (task) => {
+    try {
+      const response = await fetch(`/api/items/${task.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !task.completed, title: task.title, dueDate: task.due_date }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update task');
+      }
+
+      const updatedTask = await response.json();
+      setTasks((currentTasks) => currentTasks.map((item) => (item.id === task.id ? updatedTask : item)));
+      setError(null);
+    } catch (err) {
+      setError('Error updating task: ' + err.message);
+      console.error('Error updating task:', err);
+    }
+  };
+
+  const startEditing = (task) => {
+    setEditingTaskId(task.id);
+    setEditTitle(task.title);
+    setEditDueDate(task.due_date || '');
+  };
+
+  const cancelEditing = () => {
+    setEditingTaskId(null);
+    setEditTitle('');
+    setEditDueDate('');
+  };
+
+  const handleSaveEdit = async (taskId) => {
+    try {
+      const response = await fetch(`/api/items/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editTitle, dueDate: editDueDate || null }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update task');
+      }
+
+      const updatedTask = await response.json();
+      setTasks((currentTasks) => currentTasks.map((item) => (item.id === taskId ? updatedTask : item)));
+      cancelEditing();
+      setError(null);
+    } catch (err) {
+      setError('Error updating task: ' + err.message);
+      console.error('Error updating task:', err);
     }
   };
 
@@ -82,39 +143,77 @@ function App() {
 
       <main>
         <section className="add-item-section">
-          <h2>Add New Item</h2>
-          <form onSubmit={handleSubmit}>
+          <h2>Add New Task</h2>
+          <form onSubmit={handleSubmit} className="task-form">
             <input
               type="text"
-              value={newItem}
-              onChange={(e) => setNewItem(e.target.value)}
-              placeholder="Enter item name"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              placeholder="Enter task title"
             />
-            <button type="submit">Add Item</button>
+            <input
+              type="date"
+              value={newTaskDueDate}
+              onChange={(e) => setNewTaskDueDate(e.target.value)}
+            />
+            <button type="submit">Add Task</button>
           </form>
         </section>
 
         <section className="items-section">
-          <h2>Items from Database</h2>
-          {loading && <p>Loading data...</p>}
+          <h2>Tasks</h2>
+          {loading && <p>Loading tasks...</p>}
           {error && <p className="error">{error}</p>}
           {!loading && !error && (
             <ul>
-              {data.length > 0 ? (
-                data.map((item) => (
-                  <li key={item.id}>
-                    <span>{item.name}</span>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="delete-btn"
-                      type="button"
-                    >
-                      Delete
-                    </button>
+              {tasks.length > 0 ? (
+                tasks.map((task) => (
+                  <li key={task.id} className={task.completed ? 'completed' : ''}>
+                    <div className="task-content">
+                      <label className="task-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={task.completed}
+                          onChange={() => handleToggleComplete(task)}
+                        />
+                        {editingTaskId === task.id ? (
+                          <div className="edit-fields">
+                            <input
+                              type="text"
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                            />
+                            <input
+                              type="date"
+                              value={editDueDate}
+                              onChange={(e) => setEditDueDate(e.target.value)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="task-text">
+                            <span>{task.title}</span>
+                            {task.due_date && <small>Due {task.due_date}</small>}
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                    <div className="task-actions">
+                      {editingTaskId === task.id ? (
+                        <>
+                          <button type="button" onClick={() => handleSaveEdit(task.id)}>Save</button>
+                          <button type="button" className="secondary-btn" onClick={cancelEditing}>Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" onClick={() => startEditing(task)}>Edit</button>
+                          <button type="button" className="delete-btn" onClick={() => handleDelete(task.id)}>Delete</button>
+                        </>
+                      )}
+                    </div>
                   </li>
                 ))
               ) : (
-                <p>No items found. Add some!</p>
+                <p>No tasks found. Add some!</p>
               )}
             </ul>
           )}
