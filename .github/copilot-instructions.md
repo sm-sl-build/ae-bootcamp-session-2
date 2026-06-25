@@ -11,3 +11,4 @@ The project documentation will be built during the bootcamp sessions.
 - [Project Overview](../docs/project-overview.md) - Overview of the project
 - [Functional Requirements](../docs/functional-requirements.md) - Core functional requirements for the app
 - [UI Guidelines](../docs/ui-guidelines.md) - Core UI guidelines for the app
+- [Testing Guidelines](../docs/testing-guidelines.md) - Testing principles and best practices for the project
