@@ -173,4 +173,11 @@ app.delete('/api/items/:id', (req, res) => {
   }
 });
 
-module.exports = { app, db, insertStmt: db.prepare('INSERT INTO items (title, completed, due_date) VALUES (?, ?, ?)') };
+module.exports = {
+  app,
+  db,
+  insertStmt: db.prepare('INSERT INTO items (title, completed, due_date) VALUES (?, ?, ?)'),
+  normalizeTask,
+  isValidTitle,
+  isValidDueDate,
+};
