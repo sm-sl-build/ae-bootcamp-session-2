@@ -6,7 +6,7 @@ test('user can add and complete a task', async ({ page }) => {
   await todoPage.open();
 
   await todoPage.addTask('Playwright task');
-  await expect(page.getByText('Playwright task')).toBeVisible();
+  await expect(page.getByText('Playwright task').first()).toBeVisible();
 
   await todoPage.toggleFirstTask();
   await expect(page.getByRole('checkbox').first()).toBeChecked();

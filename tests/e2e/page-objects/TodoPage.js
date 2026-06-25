@@ -13,7 +13,7 @@ class TodoPage {
   }
 
   async toggleFirstTask() {
-    await this.page.getByRole('checkbox').first().check();
+    await this.page.getByRole('checkbox').first().click();
   }
 }
 
